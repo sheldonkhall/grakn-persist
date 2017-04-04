@@ -8,6 +8,7 @@ import ai.grakn.graql.analytics.ClusterQuery;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static ai.grakn.graql.Graql.var;
 
@@ -21,7 +22,9 @@ public class Main {
         computeClusters();
     }
 
-    private static Map<String, Long> computeClusters() {
+    private static Map<String, Set<String>> computeClusters() {
+
+        System.setProperty("hadoop.home.dir", "/");
 
         // initialise the connection to engine
         try (GraknSession session = Grakn.session(Grakn.DEFAULT_URI, "genealogy")) {
@@ -30,10 +33,10 @@ public class Main {
             try (GraknGraph graph = session.open(GraknTxType.READ)) {
 
                 // construct the analytics cluster query
-                ClusterQuery<Map<String, Long>> query = graph.graql().compute().cluster().in("person", "marriage");
+                ClusterQuery<Map<String, Set<String>>> query = graph.graql().compute().cluster().in("person", "marriage").members();
 
                 // execute the analytics query
-                Map<String, Long> clusters = query.execute();
+                Map<String, Set<String>> clusters = query.execute();
 
                 return clusters;
             }

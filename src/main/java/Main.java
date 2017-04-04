@@ -4,6 +4,7 @@ import ai.grakn.GraknSession;
 import ai.grakn.GraknTxType;
 import ai.grakn.concept.Concept;
 import ai.grakn.concept.ConceptId;
+import ai.grakn.concept.ResourceType;
 import ai.grakn.graql.Graql;
 import ai.grakn.graql.InsertQuery;
 import ai.grakn.graql.MatchQuery;
@@ -31,8 +32,46 @@ public class Main {
         Map<String, Set<String>> results = computeClusters();
         mutateOntology();
         persistClusters(results);
-        degreeOfClusters();
+        Map<Long, Set<String>> degrees = degreeOfClusters();
+        persistDegrees(degrees);
         System.out.println("Finished calculation!");
+    }
+
+    private static void persistDegrees(Map<Long, Set<String>> degrees) {
+
+        // initialise the connection to engine
+        try (GraknSession session = Grakn.session(Grakn.DEFAULT_URI, "genealogy")) {
+
+            try (GraknGraph graph = session.open(GraknTxType.WRITE)) {
+
+                // mutate the ontology
+                Var degree = Graql.var().name("degree").sub("resource").datatype(ResourceType.DataType.LONG);
+                Var cluster = Graql.var().name("cluster").hasResource("degree");
+
+                // execute the query
+                graph.graql().insert(degree, cluster).execute();
+
+                // don't forget to commit
+                graph.commit();
+            }
+
+            try (GraknGraph graph = session.open(GraknTxType.WRITE)) {
+
+                // add the degrees to the cluster
+                Set<Var> degreeMutation = new HashSet<>();
+                degrees.forEach((degree, concepts) -> {
+                    concepts.forEach(concept -> {
+                        degreeMutation.add(Graql.var().id(ConceptId.of(concept)).has("degree",degree));
+                    });
+                });
+
+                // execute the query
+                graph.graql().insert(degreeMutation).execute();
+
+                // don't forget to commit
+                graph.commit();
+            }
+        }
     }
 
     private static Map<Long, Set<String>> degreeOfClusters() {
@@ -88,7 +127,7 @@ public class Main {
 
     private static void horrendousBugFixes() {
         ch.qos.logback.classic.Logger rootLogger = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(ch.qos.logback.classic.Logger.ROOT_LOGGER_NAME);
-        rootLogger.setLevel(Level.toLevel("off"));
+        rootLogger.setLevel(Level.toLevel("error"));
         System.setProperty("hadoop.home.dir", "/");
     }
 

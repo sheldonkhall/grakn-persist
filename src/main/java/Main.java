@@ -9,6 +9,7 @@ import ai.grakn.graql.InsertQuery;
 import ai.grakn.graql.MatchQuery;
 import ai.grakn.graql.Var;
 import ai.grakn.graql.analytics.ClusterQuery;
+import ai.grakn.graql.analytics.DegreeQuery;
 import ch.qos.logback.classic.Level;
 import org.slf4j.LoggerFactory;
 
@@ -30,6 +31,27 @@ public class Main {
         Map<String, Set<String>> results = computeClusters();
         mutateOntology();
         persistClusters(results);
+        degreeOfClusters();
+        System.out.println("Finished calculation!");
+    }
+
+    private static Map<Long, Set<String>> degreeOfClusters() {
+
+        // initialise the connection to engine
+        try (GraknSession session = Grakn.session(Grakn.DEFAULT_URI, "genealogy")) {
+
+            // open a graph (database transaction)
+            try (GraknGraph graph = session.open(GraknTxType.READ)) {
+
+                // construct the analytics cluster query
+                DegreeQuery query = graph.graql().compute().degree().in("cluster", "grouping").of("cluster");
+
+                // execute the analytics query
+                Map<Long, Set<String>> degrees = query.execute();
+
+                return degrees;
+            }
+        }
     }
 
     private static void persistClusters(Map<String, Set<String>> results) {
@@ -53,7 +75,7 @@ public class Main {
                     // attach the members
                     memberSet.forEach(member -> {
                         Var memberVar = Graql.var().id(ConceptId.of(member));
-                        insertVars.add(Graql.var().isa("grouping").rel("group",cluster).rel("member",memberVar));
+                        insertVars.add(Graql.var().isa("grouping").rel("group", cluster).rel("member",memberVar));
                     });
 
                     // execute query and commit

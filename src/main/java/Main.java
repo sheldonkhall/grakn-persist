@@ -11,8 +11,6 @@ import ai.grakn.graql.MatchQuery;
 import ai.grakn.graql.Var;
 import ai.grakn.graql.analytics.ClusterQuery;
 import ai.grakn.graql.analytics.DegreeQuery;
-import ch.qos.logback.classic.Level;
-import org.slf4j.LoggerFactory;
 
 import java.util.HashSet;
 import java.util.List;
@@ -45,8 +43,8 @@ public class Main {
             try (GraknGraph graph = session.open(GraknTxType.WRITE)) {
 
                 // mutate the ontology
-                Var degree = Graql.var().name("degree").sub("resource").datatype(ResourceType.DataType.LONG);
-                Var cluster = Graql.var().name("cluster").hasResource("degree");
+                Var degree = Graql.var().label("degree").sub("resource").datatype(ResourceType.DataType.LONG);
+                Var cluster = Graql.var().label("cluster").has("degree");
 
                 // execute the query
                 graph.graql().insert(degree, cluster).execute();
@@ -126,9 +124,9 @@ public class Main {
     }
 
     private static void horrendousBugFixes() {
-        ch.qos.logback.classic.Logger rootLogger = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(ch.qos.logback.classic.Logger.ROOT_LOGGER_NAME);
-        rootLogger.setLevel(Level.toLevel("error"));
-        System.setProperty("hadoop.home.dir", "/");
+//        ch.qos.logback.classic.Logger rootLogger = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(ch.qos.logback.classic.Logger.ROOT_LOGGER_NAME);
+//        rootLogger.setLevel(Level.toLevel("error"));
+//        System.setProperty("hadoop.home.dir", "/");
     }
 
     private static void mutateOntology() {
@@ -140,12 +138,12 @@ public class Main {
             try (GraknGraph graph = session.open(GraknTxType.WRITE)) {
 
                 // create set of vars representing the mutation
-                Var group = Graql.var("group").name("group").sub("role");
-                Var member = Graql.var("member").name("member").sub("role");
-                Var grouping = Graql.var("grouping").name("grouping").sub("relation").hasRole(group).hasRole(member);
-                Var cluster = Graql.var("cluster").name("cluster").sub("entity").playsRole(group);
-                Var personPlaysRole = Graql.var("person").name("person").playsRole("member");
-                Var marriagePlaysRole = Graql.var("marriage").name("marriage").playsRole("member");
+                Var group = Graql.var("group").label("group").sub("role");
+                Var member = Graql.var("member").label("member").sub("role");
+                Var grouping = Graql.var("grouping").label("grouping").sub("relation").relates(group).relates(member);
+                Var cluster = Graql.var("cluster").label("cluster").sub("entity").plays(group);
+                Var personPlaysRole = Graql.var("person").label("person").plays("member");
+                Var marriagePlaysRole = Graql.var("marriage").label("marriage").plays("member");
 
                 // construct the insert query
                 InsertQuery query = graph.graql().insert(group, member, grouping, cluster, personPlaysRole, marriagePlaysRole);
